@@ -12,41 +12,63 @@
         var $steps,
             currentStep = 0;
 
-        var _panel = {
-            isValid: function() {
-                return false;
-            },
-            show: function() {
-                $(this).show();
-            }
+        // var _panel = {
+        //     isValid: function() {
+        //         return false;
+        //     },
+        //     show: function() {
+        //         console.log('show');
+        //         $(this).show();
+        //         $(this).parents('form').removeClass (function (index, className) {
+        //             return (className.match (/\bstep\d+/g) || []).join(' ');
+        //         }).addClass("step" + currentStep);                
+        //         // $(this).parents("form");
+
+        //         // removeClass("step" + currentStep).addClass("step" + (currentStep + 1));
+        //     }
+        // }
+        // 
+        
+        var showStep = function(stepNumber) {
+            $($steps[stepNumber]).show(function() {
+                $(this).parents('form').removeClass (function (index, className) {
+                    return (className.match (/\bstep\d+/g) || []).join(' ');
+                }).addClass("step" + currentStep);       
+            });            
+        }
+
+        var hideStep = function(stepNumber) {
+            $($steps[stepNumber]).hide();            
         }
 
         var showCurrentStep = function() {
-            $($steps[currentStep]).show();
+            showStep(currentStep);
         };
 
         var hideCurrentStep = function() {
-            $($steps[currentStep]).hide();
+            hideStep(currentStep);
         };
 
         var showNextStep = function() {
             hideCurrentStep();
-            $($steps[currentStep + 1]).show();
             currentStep++;
+            showStep(currentStep);
+            
         }
 
         var showPreviousStep = function() {
             hideCurrentStep();
-            $($steps[currentStep - 1]).show();
             currentStep--;
+            showStep(currentStep);
+            
         }
 
         var configureButtons = function(step) {
             var stepNumber = $.inArray(step, $steps);
-            $(step).append('<div class="buttons"></div>');
+            $(step).append('<div class="buttons btn-group"></div>');
             if (stepNumber > -1) {
                 if ($steps[stepNumber + 1]) {
-                    var $button = $('<button class="btn btn-primary">Next</button>').click(function(e) {
+                    var $button = $('<button class="btn">Next <i class="icon-chevron-right"></i></button>').click(function(e) {
                         console.log(this);
                         e.preventDefault();
                         showNextStep();
@@ -55,7 +77,7 @@
                 }
 
                 if ($steps[stepNumber - 1]) {
-                    var $button = $('<button class="btn btn-secondary">Previous</button>').click(function(e) {
+                    var $button = $('<button class="btn btn-secondary"><i class="icon-chevron-left"></i> Previous</button>').click(function(e) {
                         console.log(this);
                         e.preventDefault();
                         showPreviousStep();
@@ -63,14 +85,19 @@
                     $('.buttons',step).prepend($button)
                 }
             }
-            console.log(stepNumber + " " + $steps.length);
+            
             if (stepNumber == ($steps.length - 1)) {
-                var $button = $('<button class="btn btn-success">Request a Quote!</button>').click(function(e) {
-                    console.log(this);
+
+                var $reviewButton = $('<button class="btn btn-primary">Review <i class="icon-chevron-right icon-white"></i></button>');
+
+                // Show Review Step
+                var $submit = $('.submit', $el).clone();
+                $('.submit', $el).hide();
+                $reviewButton.click(function(e) {
                     e.preventDefault();
-                    showPreviousStep();
+                    
                 });
-                $('.buttons',step).append($button)
+                $('.buttons',step).append($reviewButton)
             }
         };
 
@@ -86,19 +113,18 @@
                     console.error(e.message);
                     return false;
                 }
-
-                console.log('Found ' + $steps.length + ' step' + ($steps.length>1?'s':''));
                 
                 $steps.each(function() {
-                    
-                    this.isValid = _panel.isValid.call(this);
-                    this.show = _panel.show.call(this);
                     configureButtons(this);
-
                     $(this).hide();
                 });
                 
-                $('.submit',$el).hide();
+                var $ul = $('<ul class="lm-merlin-progress"></ul>');
+                for (var i=0; i < $steps.length; i++) {
+                    var $li = '<li class="step' + i + '">Step ' + i + '</li>';
+                    $ul.append($li);
+                }
+                $($el).prepend($ul);
                 showCurrentStep();
 
             },
