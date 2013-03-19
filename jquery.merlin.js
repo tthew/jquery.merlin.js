@@ -12,17 +12,20 @@
 
     // Namespace
     var Merlin = function(el) {
-        var $steps,
+        var $form,
+            $steps,
+            $submitButton,
+            buttons,
             currentStep = 0;
 
         // show specified step
-        var showStep = function(stepNumber) {
-            currentStep = stepNumber;
-            $($steps[stepNumber]).show(function() {
-                $(this).parents('form').removeClass (function (index, className) {
+        var showStep = function() {
+            $($steps[currentStep]).show(function() {
+                $(el).removeClass (function (index, className) {
                     return (className.match (/\bstep\d+/g) || []).join(' ');
                 }).addClass("step" + currentStep);       
-            });            
+            });           
+            buttons.draw(); 
         }
 
         // Hide all steps
@@ -49,22 +52,19 @@
         var showNextStep = function() {
             hideCurrentStep();
             currentStep++;
-            showStep(currentStep);
-            
+            showStep();
         }
         
         // Show the previous step
         var showPreviousStep = function() {
             hideCurrentStep();
             currentStep--;
-            showStep(currentStep);
+            showStep();
             
         }
 
         // Show Review step
         var showReview = function() {
-
-            
             $(el).removeClass(function (index, className) {
                 console.log((className.match (/\bstep\d+/g) || []).join(' '));
                 return (className.match (/\bstep\d+/g) || []).join(' ');
@@ -114,79 +114,9 @@
             return validationErrors.length > 0 ? false : true;
         }
 
-        // Configure buttons for specific step
-        var configureButtons = function(step) {
-            var stepNumber = $.inArray(step, $steps);
-            $(step).append('<div class="buttons btn-group"></div>');
-            // Check we have a valid step number
-            // REFACTOR
-            if (stepNumber > -1) {
-                // Check whether the next step exists
-                if ($steps[stepNumber + 1]) {
-                    var $button = $('<button class="btn">Next <i class="icon-chevron-right"></i></button>').click(function(e) {
-                        e.preventDefault();
-
-                        if (isValid(step)) {
-                            showNextStep();
-                        }                        
-                    });
-                    $(settings.buttonWellTarget).append($button)
-                }
-
-                // Check whether the previous step exists
-                if ($steps[stepNumber - 1]) {
-                    var $button = $('<button class="btn btn-secondary"><i class="icon-chevron-left"></i> Previous</button>').click(function(e) {
-                        e.preventDefault();
-                        showPreviousStep();
-                    });
-                    $(settings.buttonWellTarget).prepend($button)
-                }
-            }
+        var progressIndicatorController = function() {
             
-            // Check that previous step exists
-            if (stepNumber == ($steps.length - 1)) {
-
-                var $reviewButton = $('<button class="btn btn-primary">Review <i class="icon-chevron-right icon-white"></i></button>');
-
-                // Show Review Step
-                var $submit = $('.submit', el).clone();
-                $('.submit', el).hide();
-                $reviewButton.click(function(e) {
-                    e.preventDefault();
-                    if (isValid(step)) {
-                        showReview();
-                    }
-                    
-                });
-
-                $(settings.buttonWellTarget).append($reviewButton)
-            }
-        };
-
-
-        // Return public API
-        return {
-            // Initialise instance
-            init: function() {
-                // add namespace className to target element.
-                $(el).addClass('lm-merlin');
-                // Get steps
-                try {
-                    $steps = $('.step', el);
-                    if (!$steps.length) {
-                        throw new Error("No steps found");
-                    }
-                } catch (e) {
-                    console.error(e.message);
-                    return false;
-                }
-                
-                // Iterate through each step and configure buttons
-                $steps.each(function() {
-                    configureButtons(this);
-                    $(this).hide();
-                });
-                
+            var _init = function() {
                 // Setup progress bar and inject into DOM.
                 var $ul = $('<ul class="lm-merlin-progress"></ul>');
                 for (var i=0; i < $steps.length; i++) {
@@ -201,32 +131,136 @@
                     $ul.append($li);
                 }
                 $ul.append('<li class="review">Review</li>');
-                $(el).prepend($ul);
-                showCurrentStep();
+                $(settings.progressIndicatorTargetSelector, el).append($ul);   
             }
+
+            var _draw = function() {
+
+            }
+
+            return {
+                draw: _draw,
+                init: _init
+            }
+        }
+
+        var buttonController = function() {
+
+            var $previousButton = $('<button class="btn"><i class="icon-chevron-left"></i> Previous</button>').click(function(e) {
+                e.preventDefault();
+                showPreviousStep();
+            });
+
+            var $nextButton = $('<button class="btn">Next <i class="icon-chevron-right"></i></button>').click(function(e) {
+                e.preventDefault();
+                if (isValid($steps[currentStep])) {
+                    showNextStep();
+                }                        
+            });
+
+            var $reviewButton = $('<button class="btn btn-primary">Review <i class="icon-chevron-right icon-white"></i></button>').click(function(e) {
+                e.preventDefault();
+            });
+
+            // Clone submit button & remove original from dom
+            var $submitButton = $('.submit', el).clone();
+            $('.submit', el).remove();
+
+            var _draw = function() {
+                // Hide buttons
+                $previousButton.hide();
+                $nextButton.hide();
+                $reviewButton.hide();
+                $submitButton.hide();
+
+                // Check whether the next step exists & show next button
+                if ($steps[currentStep + 1]) {
+                    $nextButton.show();
+                }
+
+                // Check whether the previous step exists & show previous button
+                console.log($steps[currentStep - 1]);
+                if ($steps[currentStep - 1]) {
+                    $previousButton.show();   
+                }            
+            }
+
+            var _init = function() {
+                $(settings.buttonGroupTargetSelector).append([
+                    $previousButton,
+                    $nextButton,
+                    $reviewButton,
+                    $submitButton
+                ]);
+
+                _draw();
+
+            }
+
+            return {
+                init: _init,
+                draw: _draw
+            };
+        }
+
+        var _init = function() {
+            // Check for FORM element
+            var $forms = $(el).find('form');
+            
+            if ($forms.length === 0) {
+                throw new Error('No form found :(');
+            }
+
+            $form = $forms[0];
+
+            // add namespace className to target element.
+            $(el).addClass('lm-merlin');
+
+            // Get steps
+            try {
+                $steps = $('.step', el);
+                if (!$steps.length) {
+                    throw new Error("No steps found");
+                }
+            } catch (e) {
+                console.error(e.message);
+                return false;
+            }
+            
+            // Iterate through each step and configure buttons
+            $steps.each(function() {
+                $(this).hide();
+            });
+
+            buttons = buttonController();
+            buttons.init();
+            
+            progressIndicator = progressIndicatorController();
+            progressIndicator.init();
+
+            showCurrentStep();
+        }
+
+        // Return public API
+        return {
+            // Initialise instance
+            init: _init
         }
     };
 
      $.fn.merlin = function(options) {
         var self = this;
         settings = $.extend({
-            buttonWellTarget: '.buttons',
-            progressIndicatorTarget: '.modal-header'
+            buttonGroupTargetSelector: '.buttons',
+            progressIndicatorTargetSelector: '.modal-header'
         }, options);
 
         $(this).each(function() {
-            try {
-                // Check for FORM element
-                $form = $(this).find('form');
-                if ($form.length === 0) {
-                    throw new Error('No form found :(');
-                }
-
+            try {                
                 // Create new instance of merlin
-                var instance = new Merlin($form[0]);
+                var instance = new Merlin(this);
                 // Initialise new instance
                 instance.init();
-
                 return this;
             } catch (e) {
                 console.error(e.message);    
