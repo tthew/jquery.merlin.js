@@ -162,14 +162,25 @@
                 }                        
             });
 
-            var $reviewButton = $('<button class="btn btn-primary">Review <i class="icon-chevron-right icon-white"></i></button>').click(function(e) {
+            var $reviewButton = $('<button class="btn">Review <i class="icon-chevron-right"></i></button>').click(function(e) {
                 e.preventDefault();
                 showReview();
+            });
+
+            var $doneButton = $('<button class="btn">Done</button>').click(function(e) {
+                e.preventDefault();
+                // showReview();
             });
 
             // Clone submit button & remove original from dom
             var $submitButton = $('.submit', el).clone();
             $('.submit', el).remove();
+
+            $submitButton.click(function() {
+                hideSteps();
+                $(el).removeClass('review').addClass('complete');
+                buttons.draw();
+            });
 
             var _draw = function() {
                 // Hide buttons
@@ -177,26 +188,32 @@
                 $nextButton.hide();
                 $reviewButton.hide();
                 $submitButton.hide();
+                $doneButton.hide();
 
-                // Check whether the next step exists & show next button
-                if ($steps[currentStep + 1]) {
-                    $nextButton.show();
+                var complete = $(el).hasClass('complete');
+
+                
+                if ( complete ) {
+                    // If process is complete, show done button
+                    $doneButton.show();    
                 } else {
-                    // Check parent element for existance of .review class
-                    if ($(el).hasClass('review')) {
-                        // If we're on the review step, show the submit button
-                        $submitButton.show();
+                    // Check whether the next step exists & show next button
+                    if ($steps[currentStep + 1]) {
+                        $nextButton.show();    
                     } else {
-                        // If we're on the last step, show the review button
-                        $reviewButton.show();    
+                        if ($(el).hasClass('review')) {
+                            $submitButton.show();
+                        } else {
+                            $reviewButton.show();   
+                        }
+                         
                     }
-                    
-                }
 
-                // Check whether the previous step exists & show previous button
-                if ($steps[currentStep - 1]) {
-                    $previousButton.show();   
-                }            
+                    // Check whether the previous step exists & show previous button
+                    if ($steps[currentStep - 1]) {
+                        $previousButton.show();   
+                    }            
+                }
             }
 
             var _init = function() {
@@ -204,7 +221,8 @@
                     $previousButton,
                     $nextButton,
                     $reviewButton,
-                    $submitButton
+                    $submitButton,
+                    $doneButton
                 ]);
 
                 _draw();
@@ -241,6 +259,8 @@
                 return false;
             }
             
+            
+
             // Iterate through each step and configure buttons
             $steps.each(function() {
                 $(this).hide();
