@@ -21,7 +21,7 @@
         // show specified step
         var showStep = function() {
             $($steps[currentStep]).show(function() {
-                $(el).removeClass (function (index, className) {
+                $(el).removeClass('complete, review').removeClass(function (index, className) {
                     return (className.match (/\bstep\d+/g) || []).join(' ');
                 }).addClass("step" + currentStep);       
             });           
@@ -50,14 +50,14 @@
 
         // Show the next step
         var showNextStep = function() {
-            hideCurrentStep();
+            hideSteps();
             currentStep++;
             showStep();
         }
         
         // Show the previous step
         var showPreviousStep = function() {
-            hideCurrentStep();
+            hideSteps();
             currentStep--;
             showStep();
             
@@ -65,8 +65,8 @@
 
         // Show Review step
         var showReview = function() {
+
             $(el).removeClass(function (index, className) {
-                console.log((className.match (/\bstep\d+/g) || []).join(' '));
                 return (className.match (/\bstep\d+/g) || []).join(' ');
             }).addClass("review");       
 
@@ -83,17 +83,14 @@
                 $li.append($p);
                 $ul.append($li);
             });
-            $backButton = $('<button class="btn"><i class="icon-chevron-left"></i> Back</button>').click(function(e) {
-                e.preventDefault();
-                $(el).removeClass('review');
-                $step.hide();
-                showCurrentStep();
-            });
+         
             $step.append($ul);
-            $step.append($backButton);
+         
             hideCurrentStep();
             $step.hide();
-            $(el).append($step.show());
+            $(settings.stepsTargetSelector, el).append($step.show());
+            buttons.draw();
+            currentStep++;
         }
 
         // run validators on specified step and return boolean 
@@ -120,17 +117,24 @@
                 // Setup progress bar and inject into DOM.
                 var $ul = $('<ul class="lm-merlin-progress"></ul>');
                 for (var i=0; i < $steps.length; i++) {
+
                     var $li = $('<li  data-step="'+ i +'" class="step' + i + '">Step ' + (i + 1) + '</li>');
-                    $li.click(function() {
-                        // if destination step number is less than current step number skip validation, otherwise validate first.
-                        if (($(this).data('step') < currentStep) || isValid($steps[currentStep])) {
-                            hideSteps();
-                            showStep($(this).data('step'));    
-                        }                       
-                    });
+                    // $li.click(function() {
+                    //     // if destination step number is less than current step number skip validation, otherwise validate first.
+                    //     console.log($(this).data('step') + '<' + currentStep)
+                    //     if ($(this).data('step') < currentStep) {
+                    //         hideSteps();
+                    //         currentStep = $(this).data('step');
+                    //         showStep($(this).data('step'));    
+                    //     } else if (isValid($steps[currentStep])) {
+                    //         hideSteps();
+                    //         currentStep = $(this).data('step');
+                    //         showStep();     
+                    //     }                       
+                    // });
                     $ul.append($li);
                 }
-                $ul.append('<li class="review">Review</li>');
+                $ul.append('<li class="review">Review</li><li class="complete">Complete</li>');
                 $(settings.progressIndicatorTargetSelector, el).append($ul);   
             }
 
@@ -146,7 +150,7 @@
 
         var buttonController = function() {
 
-            var $previousButton = $('<button class="btn"><i class="icon-chevron-left"></i> Previous</button>').click(function(e) {
+            var $previousButton = $('<button class="btn"><i class="icon-chevron-left"></i> Back</button>').click(function(e) {
                 e.preventDefault();
                 showPreviousStep();
             });
@@ -160,6 +164,7 @@
 
             var $reviewButton = $('<button class="btn btn-primary">Review <i class="icon-chevron-right icon-white"></i></button>').click(function(e) {
                 e.preventDefault();
+                showReview();
             });
 
             // Clone submit button & remove original from dom
@@ -176,10 +181,19 @@
                 // Check whether the next step exists & show next button
                 if ($steps[currentStep + 1]) {
                     $nextButton.show();
+                } else {
+                    // Check parent element for existance of .review class
+                    if ($(el).hasClass('review')) {
+                        // If we're on the review step, show the submit button
+                        $submitButton.show();
+                    } else {
+                        // If we're on the last step, show the review button
+                        $reviewButton.show();    
+                    }
+                    
                 }
 
                 // Check whether the previous step exists & show previous button
-                console.log($steps[currentStep - 1]);
                 if ($steps[currentStep - 1]) {
                     $previousButton.show();   
                 }            
