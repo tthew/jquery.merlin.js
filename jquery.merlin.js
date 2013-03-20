@@ -18,6 +18,7 @@
             buttons,
             currentStep = 0;
 
+            // console.log(typeof(settings.done) === 'function');
         // show specified step
         var showStep = function() {
             $($steps[currentStep]).show(function() {
@@ -60,8 +61,30 @@
             hideSteps();
             currentStep--;
             showStep();
-            
         }
+
+        var getFields = function() {
+            return $('input.merlin, textarea.merlin, select.merlin', el);
+        }
+
+        // Show Error
+        
+        var showError = function() {
+            hideSteps();
+            $(el).addClass('error');
+            
+
+            $step = $('<div class="step error"><h3>Uh oh. Something\'s gone wrong.</h3></div>');
+            $step.append($('<a href="#">Try again?<a/>').click(function(e) {
+                e.preventDefault();
+                submitForm();
+            }));
+
+            $(settings.stepsTargetSelector, el).append($step.show());
+
+            buttons.draw();
+        }   
+        
 
         // Show Review step
         var showReview = function() {
@@ -71,11 +94,11 @@
             }).addClass("review");       
 
             $step = $('<div class="step review"></div>');
-            $fields = $('input.merlin, textarea.merlin, select.merlin', el);
-            console.log($fields);
+            $fields = getFields();
+            
             var $ul = $("<ol></ol>");
             $fields.each(function() {
-                console.log(this);
+                
                 var $li = $("<li></li>");
                 $h5 = $("<h5>" + $('label[for=' + $(this).attr('id')  + ']', el).text() + "</h5>");
                 $p = $("<p>" + $(this).val() + "</p>");
@@ -91,6 +114,14 @@
             $(settings.stepsTargetSelector, el).append($step.show());
             buttons.draw();
             currentStep++;
+        }
+
+        var showComplete = function() {
+            hideSteps();
+            $(el).removeClass('review')
+                .addClass('complete');             
+            
+            buttons.draw();
         }
 
         // run validators on specified step and return boolean 
@@ -148,6 +179,20 @@
             }
         }
 
+        var submitForm = function() {
+            $loadingOverlay = $('<div class="loading overlay"></div>');
+            $(el).append($loadingOverlay);
+            var request = $.post(settings.postUrl, getFields().serialize())
+                .done(function(resp) {
+                    $loadingOverlay.remove();
+                    showComplete();
+                })
+                .fail(function() {
+                    $loadingOverlay.remove();
+                    showError();
+                });
+        }
+
         var buttonController = function() {
 
             var $previousButton = $('<button class="btn"><i class="icon-chevron-left"></i> Back</button>').click(function(e) {
@@ -167,19 +212,13 @@
                 showReview();
             });
 
-            var $doneButton = $('<button class="btn">Done</button>').click(function(e) {
-                e.preventDefault();
-                // showReview();
-            });
-
             // Clone submit button & remove original from dom
             var $submitButton = $('.submit', el).clone();
             $('.submit', el).remove();
 
-            $submitButton.click(function() {
-                hideSteps();
-                $(el).removeClass('review').addClass('complete');
-                buttons.draw();
+            $submitButton.click(function(e) {
+                e.preventDefault();
+                submitForm();
             });
 
             var _draw = function() {
@@ -188,14 +227,16 @@
                 $nextButton.hide();
                 $reviewButton.hide();
                 $submitButton.hide();
-                $doneButton.hide();
+                
 
                 var complete = $(el).hasClass('complete');
 
-                
-                if ( complete ) {
-                    // If process is complete, show done button
-                    $doneButton.show();    
+                if ( complete ) {          
+                    // Check for existence of callback, call it if it exists
+                    if (settings.complete && typeof(settings.complete) === "function") {
+                        settings.complete.call(el);    
+                    }
+                    
                 } else {
                     // Check whether the next step exists & show next button
                     if ($steps[currentStep + 1]) {
@@ -221,8 +262,7 @@
                     $previousButton,
                     $nextButton,
                     $reviewButton,
-                    $submitButton,
-                    $doneButton
+                    $submitButton
                 ]);
 
                 _draw();
